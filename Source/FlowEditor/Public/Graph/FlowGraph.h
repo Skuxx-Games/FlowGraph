@@ -5,6 +5,7 @@
 #include "EdGraph/EdGraph.h"
 
 #include "FlowAsset.h"
+#include "FlowGraphSchema.h"
 #include "FlowGraph.generated.h"
 
 class FLOWEDITOR_API FFlowGraphInterface : public IFlowGraphInterface
