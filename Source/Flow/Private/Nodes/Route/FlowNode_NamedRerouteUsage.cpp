@@ -16,11 +16,7 @@ UFlowNode_NamedRerouteUsage::UFlowNode_NamedRerouteUsage(const FObjectInitialize
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
 }
 
-FText UFlowNode_NamedRerouteUsage::GetNodeTitle() const
-{
-	return FText::FromString(NodeTitle.ToString());
-}
-
+#if WITH_EDITOR
 void UFlowNode_NamedRerouteUsage::SetNodeName()
 {
 	if (Declaration)
@@ -29,22 +25,14 @@ void UFlowNode_NamedRerouteUsage::SetNodeName()
 	}
 	else
 	{
-		NodeTitle = FName(TEXT("Invalid named reroute"));
+		NodeTitle = FName(TEXT("Invalid Named Reroute"));
 	}
+	Modify();
 }
 
-#if WITH_EDITOR
-void UFlowNode_NamedRerouteUsage::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+FText UFlowNode_NamedRerouteUsage::GetNodeTitle() const
 {
-	if (PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(ThisClass, NodeTitle) ||
-		PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(ThisClass, Declaration))
-	{
-		SetNodeName();
-		OnReconstructionRequested.ExecuteIfBound();
-	}
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	//Improper use of this leads to pins not knowing their current owning nodes, resulting in an "Assertion failed: OwningNode". 
-	//OnReconstructionRequested.ExecuteIfBound();
+	return FText::FromString(NodeTitle.ToString());
 }
 
 FString UFlowNode_NamedRerouteUsage::GetNodeDescription() const

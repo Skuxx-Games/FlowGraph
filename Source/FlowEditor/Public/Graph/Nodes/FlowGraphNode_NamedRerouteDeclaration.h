@@ -15,8 +15,7 @@ class FLOWEDITOR_API UFlowGraphNode_NamedRerouteDeclaration : public UFlowGraphN
 	GENERATED_UCLASS_BODY()
 	
 	// UEdGraphNode
-	virtual TSharedPtr<SGraphNode> CreateVisualWidget() override;
 	virtual void PostCopyNode() override;
-	
+	virtual void PostPlacedNewNode() override; 
 	// --
 };

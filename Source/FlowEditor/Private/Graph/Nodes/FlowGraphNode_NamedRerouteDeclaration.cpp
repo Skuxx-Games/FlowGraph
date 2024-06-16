@@ -13,22 +13,34 @@ UFlowGraphNode_NamedRerouteDeclaration::UFlowGraphNode_NamedRerouteDeclaration(c
 	AssignedNodeClasses = {UFlowNode_NamedRerouteDeclaration::StaticClass()};
 }
 
-TSharedPtr<SGraphNode> UFlowGraphNode_NamedRerouteDeclaration::CreateVisualWidget()
-{
-	return Super::CreateVisualWidget();
-}
-
 void UFlowGraphNode_NamedRerouteDeclaration::PostCopyNode()
 {
 	Super::PostCopyNode();
-
 	UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetFlowNode());
 	if (const UFlowAsset* FlowAsset = GetFlowNode()->GetFlowAsset();
-	FlowAsset && Declaration)
+		FlowAsset && Declaration)
 	{
 		Declaration->UpdateDeclarationGuid(false, true);
-		//For now, at the time of copying, the usages maintain the identity of their original declaration.
-		//It seems that this is the right place to change that if needed. 
-		Declaration->MakeNameUnique();
+		Declaration->EnsureUniqueNodeTitle();
+		
+		for (UFlowNode_NamedRerouteUsage* Usage : FlowAsset->FindNamedRerouteUsages(Declaration->DeclarationGuid))
+		{
+			if (Usage && Usage->Declaration == Declaration)
+			{
+				Usage->DeclarationGuid = Declaration->DeclarationGuid;
+				Usage->SetNodeName();
+			}
+		}
 	}
+}
+
+void UFlowGraphNode_NamedRerouteDeclaration::PostPlacedNewNode()
+{
+	UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetFlowNode());
+	if (const UFlowAsset* FlowAsset = GetFlowNode()->GetFlowAsset();
+		FlowAsset && Declaration)
+	{
+		Declaration->EnsureUniqueNodeTitle();
+	}
+	Super::PostPlacedNewNode();
 }

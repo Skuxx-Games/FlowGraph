@@ -9,8 +9,9 @@ UFlowNode_NamedRerouteDeclaration::UFlowNode_NamedRerouteDeclaration(const FObje
 	: Super(ObjectInitializer)
 {
 #if WITH_EDITOR
-	Category = TEXT("Named Reroute");
+	Category = TEXT("Route");
 	NodeStyle = EFlowNodeStyle::Custom;
+	CustomNodeColor = FLinearColor::MakeRandomColor();
 #endif
 	NodeTitle = TEXT("Named Reroute");
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
@@ -29,33 +30,12 @@ void UFlowNode_NamedRerouteDeclaration::ExecuteInput(const FName& PinName)
 	}
 }
 
-void UFlowNode_NamedRerouteDeclaration::PostInitProperties()
-{
-	Super::PostInitProperties();
-	// Init the GUID
-	UpdateDeclarationGuid(false, false);
-}
-
-void UFlowNode_NamedRerouteDeclaration::PostLoad()
-{
-	Super::PostLoad();
-	// Init the GUID
-	UpdateDeclarationGuid(false, false);
-}
-
-void UFlowNode_NamedRerouteDeclaration::PostDuplicate(bool bDuplicateForPIE)
-{
-	Super::PostDuplicate(bDuplicateForPIE);
-	UpdateDeclarationGuid(false, true);
-	MakeNameUnique();
-}
-
+#if WITH_EDITOR
 FText UFlowNode_NamedRerouteDeclaration::GetNodeTitle() const
 {
 	return FText::FromString(NodeTitle.ToString());
 }
 
-#if WITH_EDITOR
 bool UFlowNode_NamedRerouteDeclaration::GetDynamicTitleColor(FLinearColor& OutColor) const
 {
 	if (NodeStyle == EFlowNodeStyle::Custom)
@@ -72,23 +52,17 @@ void UFlowNode_NamedRerouteDeclaration::PostEditChangeProperty(FPropertyChangedE
 	if (PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(ThisClass, NodeTitle) ||
 		PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(ThisClass, CustomNodeColor))
 	{
-		MakeNameUnique();
 		for (const UFlowAsset* FlowAsset = GetFlowAsset();
 		     const auto Usage : FlowAsset->FindNamedRerouteUsages(DeclarationGuid))
 		{
 			if (Usage)
 			{
 				Usage->SetNodeName();
-				Usage->GetGraphNode()->ReconstructNode();
-				OnReconstructionRequested.ExecuteIfBound();
 			}
 		}
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	//Improper use of this leads to pins not knowing their current owning nodes, resulting in an "Assertion failed: OwningNode". 
-	//OnReconstructionRequested.ExecuteIfBound();
 }
-#endif // WITH_EDITOR
 
 void UFlowNode_NamedRerouteDeclaration::UpdateDeclarationGuid(const bool bForceGeneration, const bool bAllowMarkingPackageDirty)
 {
@@ -107,39 +81,39 @@ void UFlowNode_NamedRerouteDeclaration::UpdateDeclarationGuid(const bool bForceG
 	}
 }
 
-void UFlowNode_NamedRerouteDeclaration::MakeNameUnique()
+void UFlowNode_NamedRerouteDeclaration::EnsureUniqueNodeTitle()
 {
-#if WITH_EDITORONLY_DATA
 	if (const UFlowAsset* FlowAsset = GetFlowAsset())
 	{
 		int32 NameIndex = 1;
-		bool bResultNameIndexValid = true;
-		FName PotentialName;
+		FString BaseTitle = NodeTitle.ToString();
+		FName UniqueTitle = NodeTitle;
 
-		// Find an available unique name
-		do
+		while (true)
 		{
-			PotentialName = NodeTitle;
-			if (NameIndex != 1)
+			bool bIsUnique = true;
+			for (const auto& Pair : FlowAsset->GetNodes())
 			{
-				PotentialName.SetNumber(NameIndex);
-			}
-
-			bResultNameIndexValid = true;
-			for (const auto Pair : FlowAsset->GetNodes())
-			{
-				if (const auto* OtherDeclaration = Cast<UFlowNode_NamedRerouteDeclaration>(Pair.Value);
-					OtherDeclaration && OtherDeclaration != this && OtherDeclaration->NodeTitle == PotentialName)
+				if (const UFlowNode_NamedRerouteDeclaration* OtherDeclaration = Cast<UFlowNode_NamedRerouteDeclaration>(Pair.Value))
 				{
-					bResultNameIndexValid = false;
-					break;
+					if (OtherDeclaration && OtherDeclaration != this && OtherDeclaration->NodeTitle == UniqueTitle)
+					{
+						bIsUnique = false;
+						break;
+					}
 				}
 			}
 
-			NameIndex++;
-		} while (!bResultNameIndexValid);
+			if (bIsUnique)
+			{
+				break;
+			}
 
-		NodeTitle = PotentialName;
+			UniqueTitle = FName(*FString::Printf(TEXT("%s_%d"), *BaseTitle, NameIndex));
+			++NameIndex;
+		}
+
+		NodeTitle = UniqueTitle;
 	}
-#endif // WITH_EDITORONLY_DATA
 }
+#endif // WITH_EDITOR

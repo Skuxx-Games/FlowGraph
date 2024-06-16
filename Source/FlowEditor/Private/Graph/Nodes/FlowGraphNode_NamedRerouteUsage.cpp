@@ -14,11 +14,6 @@ UFlowGraphNode_NamedRerouteUsage::UFlowGraphNode_NamedRerouteUsage(const FObject
 	AssignedNodeClasses = {UFlowNode_NamedRerouteUsage::StaticClass()};
 }
 
-TSharedPtr<SGraphNode> UFlowGraphNode_NamedRerouteUsage::CreateVisualWidget()
-{
-	return Super::CreateVisualWidget();
-}
-
 void UFlowGraphNode_NamedRerouteUsage::PostCopyNode()
 {
 	Super::PostCopyNode();
@@ -34,26 +29,6 @@ void UFlowGraphNode_NamedRerouteUsage::PostCopyNode()
 				Usage->DeclarationGuid = Declaration->DeclarationGuid;
 				Usage->SetNodeName();
 			}
-		}
-	}
-
-	MarkPackageDirty();
-}
-
-void UFlowGraphNode_NamedRerouteUsage::PostDuplicate(bool bDuplicateForPIE)
-{
-	Super::PostDuplicate(bDuplicateForPIE);
-
-	UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(GetFlowNode());
-
-	if (const UFlowAsset* FlowAsset = GetFlowNode()->GetFlowAsset();
-	!Usage->Declaration && FlowAsset)
-	{
-		if (UFlowNode_NamedRerouteDeclaration* Declaration = FlowAsset->FindNamedRerouteDeclaration(Usage->DeclarationGuid))
-		{
-			Usage->Declaration = Declaration;
-			Usage->DeclarationGuid = Declaration->DeclarationGuid;
-			Usage->SetNodeName();
 		}
 	}
 

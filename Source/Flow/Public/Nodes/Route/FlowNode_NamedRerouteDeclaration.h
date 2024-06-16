@@ -19,17 +19,14 @@ class FLOW_API UFlowNode_NamedRerouteDeclaration : public UFlowNode
 protected:
 	
 	virtual void ExecuteInput(const FName& PinName) override;
-	//~ Begin UObject Interface
+	
 #if WITH_EDITOR
-	virtual void PostInitProperties() override;
-	virtual void PostLoad() override;
-	virtual void PostDuplicate(bool bDuplicateForPIE) override;
 	virtual bool GetDynamicTitleColor(FLinearColor& OutColor) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 	virtual FText GetNodeTitle() const override;
-
+#endif
 public:
+#if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "Named Reroute")
 	FName NodeTitle;
 	/** The color of the graph node. The same color will apply to all linked usages of this Declaration node */
@@ -38,11 +35,15 @@ public:
 	// The declaration GUID
 	UPROPERTY()
 	FGuid DeclarationGuid;
+#endif
+
+#if WITH_EDITOR
 	/** 
 	* Generates a GUID for the declaration if one doesn't already exist
 	* @param bForceGeneration	Whether we should generate a GUID even if it is already valid.
 	* @param bAllowMarkingPackageDirty
 	*/
 	void UpdateDeclarationGuid(bool bForceGeneration, bool bAllowMarkingPackageDirty);
-	void MakeNameUnique();	
+	void EnsureUniqueNodeTitle();
+#endif
 };
