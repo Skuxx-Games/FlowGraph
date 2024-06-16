@@ -260,6 +260,19 @@ void UFlowAsset::SetFlowGraphInterface(TSharedPtr<IFlowGraphInterface> InFlowAss
 	FlowGraphInterface = InFlowAssetEditor;
 }
 
+void UFlowAsset::UpdateUsagesForDeletedDeclaration(const FGuid& DeclarationGuid) const
+{
+	for (const auto Usage : FindNamedRerouteUsages(DeclarationGuid))
+	{
+		if (Usage->DeclarationGuid == DeclarationGuid)
+		{
+			Usage->Declaration = nullptr;
+			Usage->DeclarationGuid.Invalidate();
+			Usage->SetNodeName();
+		}
+	}
+}
+
 UFlowNode* UFlowAsset::CreateNode(const UClass* NodeClass, UEdGraphNode* GraphNode)
 {
 	UFlowNode* NewNode = NewObject<UFlowNode>(this, NodeClass, NAME_None, RF_Transactional);
@@ -279,6 +292,11 @@ void UFlowAsset::RegisterNode(const FGuid& NewGuid, UFlowNode* NewNode)
 
 void UFlowAsset::UnregisterNode(const FGuid& NodeGuid)
 {
+	if (const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetNode(NodeGuid)))
+	{
+		UpdateUsagesForDeletedDeclaration(Declaration->DeclarationGuid);
+	}
+	
 	Nodes.Remove(NodeGuid);
 	Nodes.Compact();
 

@@ -21,6 +21,8 @@
 #include "Modules/ModuleManager.h"
 #include "ScopedTransaction.h"
 #include "SNodePanel.h"
+#include "Graph/Nodes/FlowGraphNode_Reroute.h"
+#include "Nodes/Route/FlowNode_Reroute.h"
 #include "Widgets/Docking/SDockTab.h"
 
 #define LOCTEXT_NAMESPACE "FlowGraphEditor"
@@ -232,6 +234,23 @@ void SFlowGraphEditor::BindGraphCommands()
 	                               FExecuteAction::CreateSP(this, &SFlowGraphEditor::JumpToNodeDefinition),
 	                               FCanExecuteAction::CreateSP(this, &SFlowGraphEditor::CanJumpToNodeDefinition));
 
+	// Named Reroute Commands
+	CommandList->MapAction(
+		FlowGraphCommands.SelectNamedRerouteDeclaration,
+		FExecuteAction::CreateSP(this, &SFlowGraphEditor::OnSelectNamedRerouteDeclaration));
+
+	CommandList->MapAction(
+		FlowGraphCommands.SelectNamedRerouteUsages,
+		FExecuteAction::CreateSP(this, &SFlowGraphEditor::OnSelectNamedRerouteUsages));
+
+	CommandList->MapAction(
+		FlowGraphCommands.ConvertRerouteToNamedReroute,
+		FExecuteAction::CreateSP(this, &SFlowGraphEditor::OnConvertRerouteToNamedReroute));
+
+	CommandList->MapAction(
+		FlowGraphCommands.ConvertNamedRerouteToReroute,
+		FExecuteAction::CreateSP(this, &SFlowGraphEditor::OnConvertNamedRerouteToReroute));
+	
 	// Organisation Commands
 	CommandList->MapAction(GraphEditorCommands.AlignNodesTop,
 	                               FExecuteAction::CreateSP(this, &SFlowGraphEditor::OnAlignTop));
@@ -699,45 +718,68 @@ bool SFlowGraphEditor::CanDuplicateNodes() const
 	return CanCopyNodes();
 }
 
-void SFlowGraphEditor::OnNodeDoubleClicked(class UEdGraphNode* Node) const
+void SFlowGraphEditor::OnNodeDoubleClicked(class UEdGraphNode* Node)
 {
 	UFlowNode* FlowNode = Cast<UFlowGraphNode>(Node)->GetFlowNode();
 
-	if (FlowNode)
-	{
-		if (UFlowGraphEditorSettings::Get()->NodeDoubleClickTarget == EFlowNodeDoubleClickTarget::NodeDefinition)
-		{
-			Node->JumpToDefinition();
-		}
-		else
-		{
-			const FString AssetPath = FlowNode->GetAssetPath();
-			if (!AssetPath.IsEmpty())
-			{
-				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(AssetPath);
-			}
-			else if (UObject* AssetToEdit = FlowNode->GetAssetToEdit())
-			{
-				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(AssetToEdit);
+    if (!FlowNode)
+    {
+        return;
+    }
 
-				if (IsPIE())
-				{
-					if (UFlowNode_SubGraph* SubGraphNode = Cast<UFlowNode_SubGraph>(FlowNode))
-					{
-						const TWeakObjectPtr<UFlowAsset> SubFlowInstance = SubGraphNode->GetFlowAsset()->GetFlowInstance(SubGraphNode);
-						if (SubFlowInstance.IsValid())
-						{
-							SubGraphNode->GetFlowAsset()->GetTemplateAsset()->SetInspectedInstance(SubFlowInstance->GetDisplayName());
-						}
-					}
-				}
-			}
-			else if (UFlowGraphEditorSettings::Get()->NodeDoubleClickTarget == EFlowNodeDoubleClickTarget::PrimaryAssetOrNodeDefinition)
-			{
-				Node->JumpToDefinition();
-			}
-		}
-	}
+    const EFlowNodeDoubleClickTarget DoubleClickTarget = UFlowGraphEditorSettings::Get()->NodeDoubleClickTarget;
+
+    // Handle node definition jump
+    if (DoubleClickTarget == EFlowNodeDoubleClickTarget::NodeDefinition)
+    {
+        Node->JumpToDefinition();
+        return;
+    }
+
+    // Handle double click actions for named reroute nodes
+    if (FlowNode->IsA<UFlowNode_NamedRerouteDeclaration>())
+    {
+        OnSelectNamedRerouteUsages();
+        return;
+    }
+
+    if (FlowNode->IsA<UFlowNode_NamedRerouteUsage>())
+    {
+        OnSelectNamedRerouteDeclaration();
+        return;
+    }
+
+    // Handle opening assets
+    if (const FString AssetPath = FlowNode->GetAssetPath();
+    	!AssetPath.IsEmpty())
+    {
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(AssetPath);
+        return;
+    }
+
+    if (UObject* AssetToEdit = FlowNode->GetAssetToEdit())
+    {
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(AssetToEdit);
+
+        if (IsPIE())
+        {
+            if (UFlowNode_SubGraph* SubGraphNode = Cast<UFlowNode_SubGraph>(FlowNode))
+            {
+                TWeakObjectPtr<UFlowAsset> SubFlowInstance = SubGraphNode->GetFlowAsset()->GetFlowInstance(SubGraphNode);
+                if (SubFlowInstance.IsValid())
+                {
+                    SubGraphNode->GetFlowAsset()->GetTemplateAsset()->SetInspectedInstance(SubFlowInstance->GetDisplayName());
+                }
+            }
+        }
+        return;
+    }
+
+    // Handle a default case for NodeDoubleClickTarget
+    if (DoubleClickTarget == EFlowNodeDoubleClickTarget::PrimaryAssetOrNodeDefinition)
+    {
+        Node->JumpToDefinition();
+    }
 }
 
 void SFlowGraphEditor::OnNodeTitleCommitted(const FText& NewText, ETextCommit::Type CommitInfo, UEdGraphNode* NodeBeingChanged)
@@ -1136,6 +1178,209 @@ void SFlowGraphEditor::JumpToNodeDefinition() const
 bool SFlowGraphEditor::CanJumpToNodeDefinition() const
 {
 	return GetSelectedFlowNodes().Num() == 1;
+}
+
+void SFlowGraphEditor::OnSelectNamedRerouteDeclaration()
+{
+	if (const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
+	SelectedNodes.Num() == 1)
+	{
+		ClearSelectionSet();
+		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+		{
+			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
+			{
+				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
+				const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(CurrentSelectedNode);
+				if (Usage && Usage->Declaration)
+				{
+					if (UEdGraphNode* DeclarationGraphNode = Usage->Declaration->GetGraphNode())
+					{
+						SetNodeSelection(DeclarationGraphNode, true);
+					}
+				}
+			}
+		}
+		ZoomToFit(true);
+	}
+}
+
+void SFlowGraphEditor::OnSelectNamedRerouteUsages()
+{
+	if (const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes(); SelectedNodes.Num() == 1)
+	{
+		ClearSelectionSet();
+		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+		{
+			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
+			{
+				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
+				
+				UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
+				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
+				{
+					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value);
+					Usage && Usage->Declaration == Declaration)
+					{
+						if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
+						{
+							SetNodeSelection(UsageGraphNode, true);
+						}
+					}
+				}
+			}
+		}
+		ZoomToFit(true);
+	}
+}
+
+void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
+{
+	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
+	if (SelectedNodes.Num() == 1)
+	{
+		ClearSelectionSet();
+		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+		{
+			if (UFlowGraphNode_Reroute* GraphNode = Cast<UFlowGraphNode_Reroute>(*NodeIt))
+			{
+				UEdGraph* Graph = GraphNode->GetGraph();
+				const FScopedTransaction Transaction(LOCTEXT("ConvertRerouteToNamedReroute",
+				                                             "Convert reroute to named reroute"));
+				Graph->Modify();
+
+				UFlowNode_NamedRerouteDeclaration* Declaration = CastChecked<UFlowNode_NamedRerouteDeclaration>(
+					FFlowGraphSchemaAction_NewNode::CreateNode(
+						GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteDeclaration::StaticClass(),
+						FVector2D(GraphNode->NodePosX - 50, GraphNode->NodePosY))->GetFlowNode());
+				
+				if (!Declaration)
+				{
+					return;
+				}
+
+				UEdGraphPin* DeclarationInputPin = nullptr;
+				for (auto* Pin : Declaration->GetGraphNode()->GetAllPins())
+				{
+					if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+					{
+						DeclarationInputPin = Pin;
+						break;
+					}
+				}
+				if (!ensure(DeclarationInputPin))
+				{
+					return;
+				}
+
+				for (auto* InputPin : GraphNode->InputPins[0]->LinkedTo)
+				{
+					InputPin->MakeLinkTo(DeclarationInputPin);
+				}
+
+				TArray<UEdGraphPin*> OutputPins = GraphNode->OutputPins[0]->LinkedTo;
+				OutputPins.Sort([](UEdGraphPin& A, UEdGraphPin& B)
+				{
+					return A.GetOwningNode()->NodePosY < B.GetOwningNode()->NodePosY;
+				});
+
+				int Index = -OutputPins.Num() / 2;
+				for (auto* OutputPin : OutputPins)
+				{
+					if (UFlowNode_NamedRerouteUsage* Usage = CastChecked<UFlowNode_NamedRerouteUsage>(
+						FFlowGraphSchemaAction_NewNode::CreateNode(
+							GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteUsage::StaticClass(),
+							FVector2D(GraphNode->NodePosX + 50, GraphNode->NodePosY + Index * 50))->GetFlowNode()))
+						
+					{
+						Usage->Declaration = *Declaration;
+						Usage->DeclarationGuid = Declaration->DeclarationGuid;
+						Usage->SetNodeName();
+						Usage->GetGraphNode()->GetAllPins()[0]->MakeLinkTo(OutputPin); // usage node has a single pin
+					}
+					Index++;
+				}
+				
+				GraphNode->DestroyNode();
+				SetNodeSelection(Declaration->GetGraphNode(), true);
+			}
+		}
+	}
+}
+
+void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
+{
+	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
+	if (SelectedNodes.Num() == 1)
+	{
+		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+		{
+			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
+			{
+				UEdGraph* Graph = GraphNode->GetGraph();
+				const FScopedTransaction Transaction(LOCTEXT("ConvertNamedRerouteToReroute", "Convert named reroute to reroute"));
+				Graph->Modify();
+
+				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
+				UFlowNode_NamedRerouteDeclaration* Declaration =
+					Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
+				if (!Declaration)
+				{
+					if (const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(
+						CurrentSelectedNode))
+					{
+						Declaration = Usage->Declaration;
+					}
+				}
+				if (!Declaration)
+				{
+					return;
+				}
+				
+				UEdGraphNode* DeclarationGraphNode = Declaration->GetGraphNode();
+				const FVector2D KnotPosition(DeclarationGraphNode->NodePosX + 50, DeclarationGraphNode->NodePosY);
+
+				const UFlowNode_Reroute* Reroute = CastChecked<UFlowNode_Reroute>(
+					FFlowGraphSchemaAction_NewNode::CreateNode(
+						GetCurrentGraph(), nullptr, UFlowNode_Reroute::StaticClass(), KnotPosition)->GetFlowNode());
+
+				const auto KnotGraphNode = CastChecked<UFlowGraphNode_Reroute>(Reroute->GetGraphNode());
+				for (UEdGraphPin* Pin : DeclarationGraphNode->GetAllPins())
+				{
+					if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+					{
+						for (UEdGraphPin* InputPin : Pin->LinkedTo)
+						{
+							KnotGraphNode->InputPins[0]->MakeLinkTo(InputPin);
+						}
+					}
+					if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
+					{
+						for (UEdGraphPin* OutputPin : Pin->LinkedTo)
+						{
+							KnotGraphNode->OutputPins[0]->MakeLinkTo(OutputPin);
+						}
+					}
+				}
+				DeclarationGraphNode->DestroyNode();
+
+				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
+				{
+					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value); Usage && Usage->Declaration == Declaration)
+					{
+						if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
+						{
+							for (UEdGraphPin* Pin = Usage->GetGraphNode()->GetAllPins()[0]; UEdGraphPin* OutputPin : Pin->LinkedTo)
+							{
+								KnotGraphNode->OutputPins[0]->MakeLinkTo(OutputPin);
+							}
+							UsageGraphNode->DestroyNode();
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
