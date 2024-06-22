@@ -130,6 +130,9 @@ private:
 	
 	//This function is necessary until I find a better way to update the usages that lost their declaration. 
 	void UpdateUsagesForDeletedDeclaration(const FGuid& DeclarationGuid) const;
+	// Necessary to update the usages in contexts where declarations and usages are copied together,
+	// and the declarations do not yet exist in the graph.
+	void UpdateNamedRerouteUsages(UFlowNode* NewNode) const;
 
 #if WITH_EDITORONLY_DATA
 protected:
@@ -196,7 +199,7 @@ public:
 	}
 	
 	/**
-	 * Find a declaration in a map of nodes
+	 * Find a declaration in the graph
 	 * @param NodeGuid The GUID of the declaration to find
 	 * @return nullptr if not found
 	 */
@@ -206,7 +209,7 @@ public:
 		{
 			if (UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(NodePair.Value))
 			{
-				if (Declaration->DeclarationGuid == NodeGuid)
+				if (Declaration && Declaration->GetGuid() == NodeGuid)
 				{
 					return Declaration;
 				}
@@ -227,7 +230,7 @@ public:
 		{
 			if (UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(NodePair.Value))
 			{
-				if (Usage->DeclarationGuid == NodeGuid)
+				if (Usage->GetLinkedDeclaration() && Usage->GetLinkedDeclaration()->GetGuid() == NodeGuid)
 				{
 					Usages.Add(Usage);
 				}

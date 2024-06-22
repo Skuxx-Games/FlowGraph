@@ -221,10 +221,9 @@ UEdGraphNode* FFlowGraphSchemaAction_NewNamedRerouteUsage::PerformAction(class U
 	if (UFlowGraphNode* NewGraphNode = FFlowGraphSchemaAction_NewNode::CreateNode(
 		ParentGraph, FromPin, UFlowNode_NamedRerouteUsage::StaticClass(), Location, bSelectNewNode))
 	{
-		UFlowNode_NamedRerouteUsage* NewNode = CastChecked<UFlowNode_NamedRerouteUsage>(NewGraphNode->GetFlowNode());
-		NewNode->Declaration = Declaration;
-		NewNode->DeclarationGuid = Declaration->DeclarationGuid;
-		NewNode->SetNodeName();
+		UFlowNode_NamedRerouteUsage* NewUsage = CastChecked<UFlowNode_NamedRerouteUsage>(NewGraphNode->GetFlowNode());
+		NewUsage->RegisterLinkedDeclaration(Declaration);
+		ParentGraph->Modify(true);
 		ParentGraph->NotifyGraphChanged();
 
 		return NewGraphNode;
@@ -234,7 +233,7 @@ UEdGraphNode* FFlowGraphSchemaAction_NewNamedRerouteUsage::PerformAction(class U
 }
 
 /////////////////////////////////////////////////////
-// Comment Node
+// New Comment
 
 UEdGraphNode* FFlowGraphSchemaAction_NewComment::PerformAction(class UEdGraph* ParentGraph, UEdGraphPin* FromPin, const FVector2D Location, const bool bSelectNewNode/* = true*/)
 {

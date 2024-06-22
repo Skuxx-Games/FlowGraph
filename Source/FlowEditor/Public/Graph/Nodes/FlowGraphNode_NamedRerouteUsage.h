@@ -13,8 +13,4 @@ UCLASS()
 class FLOWEDITOR_API UFlowGraphNode_NamedRerouteUsage : public UFlowGraphNode
 {
 	GENERATED_UCLASS_BODY()
-
-	// UEdGraphNode
-	virtual void PostCopyNode() override;
-	// --
 };

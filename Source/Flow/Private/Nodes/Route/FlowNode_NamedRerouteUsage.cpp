@@ -16,20 +16,33 @@ UFlowNode_NamedRerouteUsage::UFlowNode_NamedRerouteUsage(const FObjectInitialize
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
 }
 
-#if WITH_EDITOR
-void UFlowNode_NamedRerouteUsage::SetNodeName()
+void UFlowNode_NamedRerouteUsage::RegisterLinkedDeclaration(UFlowNode_NamedRerouteDeclaration* Declaration)
 {
+	Modify(true);
 	if (Declaration)
 	{
-		NodeTitle = FName(*Declaration->GetNodeTitle().ToString());
+		LinkedDeclaration = Declaration;
 	}
-	else
-	{
-		NodeTitle = FName(TEXT("Invalid Named Reroute"));
-	}
-	Modify();
+	
+#if WITH_EDITOR
+	TryUpdateNode();
+#endif
 }
 
+void UFlowNode_NamedRerouteUsage::UnregisterLinkedDeclaration()
+{
+	Modify(true);
+	if (LinkedDeclaration)
+	{
+		LinkedDeclaration = nullptr;
+	}
+
+#if WITH_EDITOR
+	TryUpdateNode();
+#endif
+}
+
+#if WITH_EDITOR
 FText UFlowNode_NamedRerouteUsage::GetNodeTitle() const
 {
 	return FText::FromString(NodeTitle.ToString());
@@ -37,7 +50,7 @@ FText UFlowNode_NamedRerouteUsage::GetNodeTitle() const
 
 FString UFlowNode_NamedRerouteUsage::GetNodeDescription() const
 {
-	if (!Declaration)
+	if (!LinkedDeclaration)
 	{
 		return TEXT("Declaration is NOT valid!");
 	}
@@ -47,7 +60,7 @@ FString UFlowNode_NamedRerouteUsage::GetNodeDescription() const
 
 FString UFlowNode_NamedRerouteUsage::GetStatusString() const
 {
-	if (ActivationState == EFlowNodeState::Active && !Declaration)
+	if (ActivationState == EFlowNodeState::Active && !LinkedDeclaration)
 	{
 		return TEXT("The Named Reroute Declaration that is linked to this usage is NOT valid!");
 	}
@@ -57,7 +70,7 @@ FString UFlowNode_NamedRerouteUsage::GetStatusString() const
 
 EDataValidationResult UFlowNode_NamedRerouteUsage::ValidateNode()
 {
-	if (!Declaration)
+	if (!LinkedDeclaration)
 	{
 		ValidationLog.Error<UFlowNode>(TEXT("Named Reroute Declaration is NOT valid!"), this);
 		return EDataValidationResult::Invalid;
@@ -68,15 +81,27 @@ EDataValidationResult UFlowNode_NamedRerouteUsage::ValidateNode()
 
 bool UFlowNode_NamedRerouteUsage::GetDynamicTitleColor(FLinearColor& OutColor) const
 {
-	if (Declaration)
+	if (LinkedDeclaration)
 	{
 		if (NodeStyle == EFlowNodeStyle::Custom)
 		{
-			OutColor = Declaration->CustomNodeColor;
+			OutColor = LinkedDeclaration->CustomNodeColor;
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void UFlowNode_NamedRerouteUsage::TryUpdateNode()
+{
+	if (LinkedDeclaration)
+	{
+		NodeTitle = FName(*LinkedDeclaration->GetNodeTitle().ToString());
+	}
+	else
+	{
+		NodeTitle = FName(TEXT("Invalid Named Reroute"));
+	}
 }
 #endif

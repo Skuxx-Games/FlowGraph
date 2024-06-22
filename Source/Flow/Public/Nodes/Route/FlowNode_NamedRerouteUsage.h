@@ -17,24 +17,16 @@ class FLOW_API UFlowNode_NamedRerouteUsage : public UFlowNode
 	friend class UFlowNode_NamedRerouteDeclaration;
 public:
 	
-	// The declaration this node is linked to
-	UPROPERTY()
-	TObjectPtr<UFlowNode_NamedRerouteDeclaration> Declaration;
-	
-	// The declaration GUID
-	UPROPERTY()
-	FGuid DeclarationGuid;
-	
-#if WITH_EDITOR
-	void SetNodeName();
-#endif
-	
-protected:
+	virtual void RegisterLinkedDeclaration(UFlowNode_NamedRerouteDeclaration* Declaration);
+	virtual void UnregisterLinkedDeclaration();
+	virtual UFlowNode_NamedRerouteDeclaration* GetLinkedDeclaration() const{return LinkedDeclaration;}
+
 #if WITH_EDITORONLY_DATA
 	UPROPERTY()
 	FName NodeTitle;
 #endif
 	
+protected:
 #if WITH_EDITOR
 	virtual FText GetNodeTitle() const override;
 	virtual FString GetNodeDescription() const override;
@@ -42,4 +34,11 @@ protected:
 	virtual EDataValidationResult ValidateNode() override;
 	virtual bool GetDynamicTitleColor(FLinearColor& OutColor) const override;
 #endif
+private:
+#if WITH_EDITOR
+	void TryUpdateNode();
+#endif
+	// The declaration this usage is linked to
+	UPROPERTY()
+	TObjectPtr<UFlowNode_NamedRerouteDeclaration> LinkedDeclaration;
 };

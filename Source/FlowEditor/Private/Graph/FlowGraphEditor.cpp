@@ -1192,9 +1192,9 @@ void SFlowGraphEditor::OnSelectNamedRerouteDeclaration()
 			{
 				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
 				const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(CurrentSelectedNode);
-				if (Usage && Usage->Declaration)
+				if (Usage && Usage->GetLinkedDeclaration())
 				{
-					if (UEdGraphNode* DeclarationGraphNode = Usage->Declaration->GetGraphNode())
+					if (UEdGraphNode* DeclarationGraphNode = Usage->GetLinkedDeclaration()->GetGraphNode())
 					{
 						SetNodeSelection(DeclarationGraphNode, true);
 					}
@@ -1220,7 +1220,7 @@ void SFlowGraphEditor::OnSelectNamedRerouteUsages()
 				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
 				{
 					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value);
-					Usage && Usage->Declaration == Declaration)
+					Usage && Usage->GetLinkedDeclaration() == Declaration)
 					{
 						if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
 						{
@@ -1293,9 +1293,7 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
 							FVector2D(GraphNode->NodePosX + 50, GraphNode->NodePosY + Index * 50))->GetFlowNode()))
 						
 					{
-						Usage->Declaration = *Declaration;
-						Usage->DeclarationGuid = Declaration->DeclarationGuid;
-						Usage->SetNodeName();
+						Usage->RegisterLinkedDeclaration(Declaration);
 						Usage->GetGraphNode()->GetAllPins()[0]->MakeLinkTo(OutputPin); // usage node has a single pin
 					}
 					Index++;
@@ -1329,7 +1327,7 @@ void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
 					if (const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(
 						CurrentSelectedNode))
 					{
-						Declaration = Usage->Declaration;
+						Declaration = Usage->GetLinkedDeclaration();
 					}
 				}
 				if (!Declaration)
@@ -1366,7 +1364,7 @@ void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
 
 				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
 				{
-					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value); Usage && Usage->Declaration == Declaration)
+					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value); Usage && Usage->GetLinkedDeclaration() == Declaration)
 					{
 						if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
 						{

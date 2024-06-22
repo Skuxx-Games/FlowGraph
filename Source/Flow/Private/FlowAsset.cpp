@@ -264,11 +264,26 @@ void UFlowAsset::UpdateUsagesForDeletedDeclaration(const FGuid& DeclarationGuid)
 {
 	for (const auto Usage : FindNamedRerouteUsages(DeclarationGuid))
 	{
-		if (Usage->DeclarationGuid == DeclarationGuid)
+		if (Usage->GetLinkedDeclaration()->GetGuid() == DeclarationGuid)
 		{
-			Usage->Declaration = nullptr;
-			Usage->DeclarationGuid.Invalidate();
-			Usage->SetNodeName();
+			Usage->UnregisterLinkedDeclaration();
+		}
+	}
+}
+
+void UFlowAsset::UpdateNamedRerouteUsages(UFlowNode* NewNode) const
+{
+	if (UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(NewNode))
+	{
+		for (const TPair<FGuid, UFlowNode*>& NodePair : GetNodes())
+		{
+			if (UFlowNode_NamedRerouteDeclaration* PotentialDeclaration = Cast<UFlowNode_NamedRerouteDeclaration>(NodePair.Value))
+			{
+				if (PotentialDeclaration->NodeTitle == Usage->NodeTitle)
+				{
+					Usage->RegisterLinkedDeclaration(PotentialDeclaration);
+				}
+			}
 		}
 	}
 }
@@ -288,13 +303,14 @@ void UFlowAsset::RegisterNode(const FGuid& NewGuid, UFlowNode* NewNode)
 	Nodes.Emplace(NewGuid, NewNode);
 
 	HarvestNodeConnections();
+	UpdateNamedRerouteUsages(NewNode);
 }
 
 void UFlowAsset::UnregisterNode(const FGuid& NodeGuid)
 {
 	if (const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetNode(NodeGuid)))
 	{
-		UpdateUsagesForDeletedDeclaration(Declaration->DeclarationGuid);
+		UpdateUsagesForDeletedDeclaration(Declaration->GetGuid());
 	}
 	
 	Nodes.Remove(NodeGuid);
