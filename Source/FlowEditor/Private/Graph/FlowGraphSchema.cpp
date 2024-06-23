@@ -572,7 +572,7 @@ void UFlowGraphSchema::GetNamedRerouteActions(FGraphActionMenuBuilder& ActionMen
 		{
 			if (const auto* FlowGraphNode = Cast<UFlowGraphNode>(GraphNode))
 			{
-				if (auto Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(FlowGraphNode->GetFlowNode()))
+				if (auto Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(FlowGraphNode->GetFlowNodeBase()))
 				{
 					static const FText Category = LOCTEXT("NamedRerouteCategory", "Named Reroutes");
 					const FText Name = FText::FromString(Declaration->NodeTitle.ToString());

@@ -437,7 +437,7 @@ void UFlowGraphNode::GetNodeContextMenuActions(class UToolMenu* Menu, class UGra
 		{
 			FToolMenuSection& PinSection = Menu->AddSection("FlowGraphNamedReroutes", LOCTEXT("FlowGraphNamedReroutesMenuHeader", "Named Reroute Actions"));
 		
-			if (FlowNode->IsA(UFlowNode_Reroute::StaticClass()))
+			if (NodeInstance->IsA(UFlowNode_Reroute::StaticClass()))
 			{
 				PinSection.AddMenuEntry(FlowGraphCommands.ConvertRerouteToNamedReroute);
 			}
@@ -532,21 +532,21 @@ void UFlowGraphNode::GetNodeContextMenuActions(class UToolMenu* Menu, class UGra
 		{
 			FToolMenuSection& NodeSection = Menu->AddSection("FlowGraphNodeNamedReroute", LOCTEXT("FlowGraphNodeNamedRerouteMenuHeader", "Named Reroute"));
 
-			if (FlowNode)
+			if (NodeInstance)
 			{
 				// Add a 'Convert to Named Reroute' option to reroute nodes
-				if (FlowNode->IsA(UFlowNode_Reroute::StaticClass()))
+				if (NodeInstance->IsA(UFlowNode_Reroute::StaticClass()))
 				{
 					NodeSection.AddMenuEntry(FlowGraphCommands.ConvertRerouteToNamedReroute);
 				}
 
 				// Add Named Reroute selection & conversion to reroute nodes
-				if (FlowNode->IsA(UFlowNode_NamedRerouteDeclaration::StaticClass()))
+				if (NodeInstance->IsA(UFlowNode_NamedRerouteDeclaration::StaticClass()))
 				{
 					NodeSection.AddMenuEntry(FlowGraphCommands.SelectNamedRerouteUsages);
 					NodeSection.AddMenuEntry(FlowGraphCommands.ConvertNamedRerouteToReroute);
 				}
-				else if (FlowNode->IsA(UFlowNode_NamedRerouteUsage::StaticClass()))
+				else if (NodeInstance->IsA(UFlowNode_NamedRerouteUsage::StaticClass()))
 				{
 					NodeSection.AddMenuEntry(FlowGraphCommands.SelectNamedRerouteDeclaration);
 				}

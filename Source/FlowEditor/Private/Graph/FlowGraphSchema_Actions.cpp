@@ -287,7 +287,7 @@ UEdGraphNode* FFlowGraphSchemaAction_NewNamedRerouteUsage::PerformAction(class U
 	if (UFlowGraphNode* NewGraphNode = FFlowGraphSchemaAction_NewNode::CreateNode(
 		ParentGraph, FromPin, UFlowNode_NamedRerouteUsage::StaticClass(), Location, bSelectNewNode))
 	{
-		UFlowNode_NamedRerouteUsage* NewUsage = CastChecked<UFlowNode_NamedRerouteUsage>(NewGraphNode->GetFlowNode());
+		UFlowNode_NamedRerouteUsage* NewUsage = CastChecked<UFlowNode_NamedRerouteUsage>(NewGraphNode->GetFlowNodeBase());
 		NewUsage->RegisterLinkedDeclaration(Declaration);
 		ParentGraph->Modify(true);
 		ParentGraph->NotifyGraphChanged();

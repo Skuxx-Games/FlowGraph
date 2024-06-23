@@ -1320,7 +1320,7 @@ void SFlowGraphEditor::OnSelectNamedRerouteDeclaration()
 		{
 			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
 			{
-				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
+				UFlowNode* CurrentSelectedNode = Cast<UFlowNode>(GraphNode->GetFlowNodeBase());
 				const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(CurrentSelectedNode);
 				if (Usage && Usage->GetLinkedDeclaration())
 				{
@@ -1344,8 +1344,7 @@ void SFlowGraphEditor::OnSelectNamedRerouteUsages()
 		{
 			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
 			{
-				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
-				
+				UFlowNode* CurrentSelectedNode = Cast<UFlowNode>(GraphNode->GetFlowNodeBase());
 				UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
 				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
 				{
@@ -1382,7 +1381,7 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
 				UFlowNode_NamedRerouteDeclaration* Declaration = CastChecked<UFlowNode_NamedRerouteDeclaration>(
 					FFlowGraphSchemaAction_NewNode::CreateNode(
 						GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteDeclaration::StaticClass(),
-						FVector2D(GraphNode->NodePosX - 50, GraphNode->NodePosY))->GetFlowNode());
+						FVector2D(GraphNode->NodePosX - 50, GraphNode->NodePosY))->GetFlowNodeBase());
 				
 				if (!Declaration)
 				{
@@ -1420,7 +1419,7 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
 					if (UFlowNode_NamedRerouteUsage* Usage = CastChecked<UFlowNode_NamedRerouteUsage>(
 						FFlowGraphSchemaAction_NewNode::CreateNode(
 							GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteUsage::StaticClass(),
-							FVector2D(GraphNode->NodePosX + 50, GraphNode->NodePosY + Index * 50))->GetFlowNode()))
+							FVector2D(GraphNode->NodePosX + 50, GraphNode->NodePosY + Index * 50))->GetFlowNodeBase()))
 						
 					{
 						Usage->RegisterLinkedDeclaration(Declaration);
@@ -1449,8 +1448,8 @@ void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
 				const FScopedTransaction Transaction(LOCTEXT("ConvertNamedRerouteToReroute", "Convert named reroute to reroute"));
 				Graph->Modify();
 
-				UFlowNode* CurrentSelectedNode = GraphNode->GetFlowNode();
-				UFlowNode_NamedRerouteDeclaration* Declaration =
+				UFlowNode* CurrentSelectedNode = Cast<UFlowNode>(GraphNode->GetFlowNodeBase());
+				const UFlowNode_NamedRerouteDeclaration* Declaration =
 					Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
 				if (!Declaration)
 				{
@@ -1470,7 +1469,7 @@ void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
 
 				const UFlowNode_Reroute* Reroute = CastChecked<UFlowNode_Reroute>(
 					FFlowGraphSchemaAction_NewNode::CreateNode(
-						GetCurrentGraph(), nullptr, UFlowNode_Reroute::StaticClass(), KnotPosition)->GetFlowNode());
+						GetCurrentGraph(), nullptr, UFlowNode_Reroute::StaticClass(), KnotPosition)->GetFlowNodeBase());
 
 				const auto KnotGraphNode = CastChecked<UFlowGraphNode_Reroute>(Reroute->GetGraphNode());
 				for (UEdGraphPin* Pin : DeclarationGraphNode->GetAllPins())
