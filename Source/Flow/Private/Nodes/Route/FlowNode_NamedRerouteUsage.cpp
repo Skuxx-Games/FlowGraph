@@ -11,9 +11,16 @@ UFlowNode_NamedRerouteUsage::UFlowNode_NamedRerouteUsage(const FObjectInitialize
 	Category = TEXT("Named Reroute");
 	NodeStyle = EFlowNodeStyle::Custom;
 #endif
-	InputPins = {};
-	OutputPins = {FFlowPin(TEXT("Out"))};
+	OutputPins = {};
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
+}
+
+void UFlowNode_NamedRerouteUsage::ExecuteInput(const FName& PinName)
+{
+	if (LinkedDeclaration)
+	{
+		LinkedDeclaration->ExecuteInput(PinName);
+	}
 }
 
 void UFlowNode_NamedRerouteUsage::RegisterLinkedDeclaration(UFlowNode_NamedRerouteDeclaration* Declaration)

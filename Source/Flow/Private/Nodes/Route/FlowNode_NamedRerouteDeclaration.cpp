@@ -13,6 +13,7 @@ UFlowNode_NamedRerouteDeclaration::UFlowNode_NamedRerouteDeclaration(const FObje
 	NodeStyle = EFlowNodeStyle::Custom;
 	CustomNodeColor = FLinearColor::MakeRandomColor();
 #endif
+	InputPins = {};
 	NodeTitle = TEXT("Named Reroute");
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
 }
@@ -20,13 +21,6 @@ UFlowNode_NamedRerouteDeclaration::UFlowNode_NamedRerouteDeclaration(const FObje
 void UFlowNode_NamedRerouteDeclaration::ExecuteInput(const FName& PinName)
 {
 	TriggerFirstOutput(true);
-	for (const auto Usage : GetFlowAsset()->FindNamedRerouteUsages(GetGuid()))
-	{
-		if (Usage)
-		{
-			Usage->TriggerFirstOutput(true);
-		}
-	}
 }
 
 #if WITH_EDITOR

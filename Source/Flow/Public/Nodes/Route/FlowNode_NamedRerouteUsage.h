@@ -16,7 +16,7 @@ class FLOW_API UFlowNode_NamedRerouteUsage : public UFlowNode
 	GENERATED_UCLASS_BODY()
 	friend class UFlowNode_NamedRerouteDeclaration;
 public:
-	
+	virtual void ExecuteInput(const FName& PinName) override;
 	virtual void RegisterLinkedDeclaration(UFlowNode_NamedRerouteDeclaration* Declaration);
 	virtual void UnregisterLinkedDeclaration();
 	virtual UFlowNode_NamedRerouteDeclaration* GetLinkedDeclaration() const{return LinkedDeclaration;}

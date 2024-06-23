@@ -1365,149 +1365,165 @@ void SFlowGraphEditor::OnSelectNamedRerouteUsages()
 
 void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
 {
-	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
-	if (SelectedNodes.Num() == 1)
-	{
-		ClearSelectionSet();
-		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
-		{
-			if (UFlowGraphNode_Reroute* GraphNode = Cast<UFlowGraphNode_Reroute>(*NodeIt))
-			{
-				UEdGraph* Graph = GraphNode->GetGraph();
-				const FScopedTransaction Transaction(LOCTEXT("ConvertRerouteToNamedReroute",
-				                                             "Convert reroute to named reroute"));
-				Graph->Modify();
-
-				UFlowNode_NamedRerouteDeclaration* Declaration = CastChecked<UFlowNode_NamedRerouteDeclaration>(
-					FFlowGraphSchemaAction_NewNode::CreateNode(
-						GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteDeclaration::StaticClass(),
-						FVector2D(GraphNode->NodePosX - 50, GraphNode->NodePosY))->GetFlowNodeBase());
-				
-				if (!Declaration)
-				{
-					return;
-				}
-
-				UEdGraphPin* DeclarationInputPin = nullptr;
-				for (auto* Pin : Declaration->GetGraphNode()->GetAllPins())
-				{
-					if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
-					{
-						DeclarationInputPin = Pin;
-						break;
-					}
-				}
-				if (!ensure(DeclarationInputPin))
-				{
-					return;
-				}
-
-				for (auto* InputPin : GraphNode->InputPins[0]->LinkedTo)
-				{
-					InputPin->MakeLinkTo(DeclarationInputPin);
-				}
-
-				TArray<UEdGraphPin*> OutputPins = GraphNode->OutputPins[0]->LinkedTo;
-				OutputPins.Sort([](UEdGraphPin& A, UEdGraphPin& B)
-				{
-					return A.GetOwningNode()->NodePosY < B.GetOwningNode()->NodePosY;
-				});
-
-				int Index = -OutputPins.Num() / 2;
-				for (auto* OutputPin : OutputPins)
-				{
-					if (UFlowNode_NamedRerouteUsage* Usage = CastChecked<UFlowNode_NamedRerouteUsage>(
-						FFlowGraphSchemaAction_NewNode::CreateNode(
-							GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteUsage::StaticClass(),
-							FVector2D(GraphNode->NodePosX + 50, GraphNode->NodePosY + Index * 50))->GetFlowNodeBase()))
-						
-					{
-						Usage->RegisterLinkedDeclaration(Declaration);
-						Usage->GetGraphNode()->GetAllPins()[0]->MakeLinkTo(OutputPin); // usage node has a single pin
-					}
-					Index++;
-				}
-				
-				GraphNode->DestroyNode();
-				SetNodeSelection(Declaration->GetGraphNode(), true);
-			}
-		}
-	}
+    const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
+    if (SelectedNodes.Num() == 1)
+    {
+        ClearSelectionSet();
+        for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+        {
+            if (UFlowGraphNode_Reroute* GraphNode = Cast<UFlowGraphNode_Reroute>(*NodeIt))
+            {
+                UEdGraph* Graph = GraphNode->GetGraph();
+                const FScopedTransaction Transaction(LOCTEXT("ConvertRerouteToNamedReroute", "Convert reroute to named reroute"));
+                Graph->Modify();
+            	
+                UFlowNode_NamedRerouteDeclaration* Declaration = CastChecked<UFlowNode_NamedRerouteDeclaration>(
+                    FFlowGraphSchemaAction_NewNode::CreateNode(
+                        GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteDeclaration::StaticClass(),
+                        FVector2D(GraphNode->NodePosX + 100, GraphNode->NodePosY))->GetFlowNodeBase());
+                
+                if (!Declaration)
+                {
+                    return;
+                }
+            	
+                UEdGraphPin* DeclarationOutputPin = nullptr;
+                for (auto* Pin : Declaration->GetGraphNode()->GetAllPins())
+                {
+                    if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
+                    {
+                        DeclarationOutputPin = Pin;
+                        break;
+                    }
+                }
+                if (!ensure(DeclarationOutputPin))
+                {
+                    return;
+                }
+            	
+                UEdGraphPin* RerouteOutputPin = GraphNode->OutputPins[0];
+                for (auto* OutputPin : RerouteOutputPin->LinkedTo)
+                {
+                    DeclarationOutputPin->MakeLinkTo(OutputPin);
+                }
+            	
+                constexpr int32 OffsetX = -100;
+                int32 OffsetY = -50;
+                for (auto* InputPin : GraphNode->InputPins[0]->LinkedTo)
+                {
+                    UFlowNode_NamedRerouteUsage* Usage = CastChecked<UFlowNode_NamedRerouteUsage>(
+                        FFlowGraphSchemaAction_NewNode::CreateNode(
+                            GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteUsage::StaticClass(),
+                            FVector2D(GraphNode->NodePosX + OffsetX, GraphNode->NodePosY + OffsetY))->GetFlowNodeBase());
+                    
+                    if (!Usage)
+                    {
+                        continue;
+                    }
+                	
+                    UEdGraphPin* UsageInputPin = nullptr;
+                    for (auto* Pin : Usage->GetGraphNode()->GetAllPins())
+                    {
+                        if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+                        {
+                            UsageInputPin = Pin;
+                            break;
+                        }
+                    }
+                    if (!ensure(UsageInputPin))
+                    {
+                        continue;
+                    }
+                	
+                    InputPin->MakeLinkTo(UsageInputPin);
+                    Usage->RegisterLinkedDeclaration(Declaration);
+                    OffsetY += 100; 
+                }
+            	
+                GraphNode->DestroyNode();
+                SetNodeSelection(Declaration->GetGraphNode(), true);
+            }
+        }
+    }
 }
 
 void SFlowGraphEditor::OnConvertNamedRerouteToReroute() const
 {
-	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
-	if (SelectedNodes.Num() == 1)
-	{
-		for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
-		{
-			if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
-			{
-				UEdGraph* Graph = GraphNode->GetGraph();
-				const FScopedTransaction Transaction(LOCTEXT("ConvertNamedRerouteToReroute", "Convert named reroute to reroute"));
-				Graph->Modify();
+    const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
+    if (SelectedNodes.Num() == 1)
+    {
+        for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
+        {
+            if (const UFlowGraphNode* GraphNode = Cast<UFlowGraphNode>(*NodeIt))
+            {
+                UEdGraph* Graph = GraphNode->GetGraph();
+                const FScopedTransaction Transaction(LOCTEXT("ConvertNamedRerouteToReroute", "Convert named reroute to reroute"));
+                Graph->Modify();
 
-				UFlowNode* CurrentSelectedNode = Cast<UFlowNode>(GraphNode->GetFlowNodeBase());
-				const UFlowNode_NamedRerouteDeclaration* Declaration =
-					Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
-				if (!Declaration)
-				{
-					if (const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(
-						CurrentSelectedNode))
-					{
-						Declaration = Usage->GetLinkedDeclaration();
-					}
-				}
-				if (!Declaration)
-				{
-					return;
-				}
-				
-				UEdGraphNode* DeclarationGraphNode = Declaration->GetGraphNode();
-				const FVector2D KnotPosition(DeclarationGraphNode->NodePosX + 50, DeclarationGraphNode->NodePosY);
+                UFlowNode* CurrentSelectedNode = Cast<UFlowNode>(GraphNode->GetFlowNodeBase());
+                const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(CurrentSelectedNode);
+                if (!Declaration)
+                {
+                    if (const UFlowNode_NamedRerouteUsage* Usage = Cast<UFlowNode_NamedRerouteUsage>(CurrentSelectedNode))
+                    {
+                        Declaration = Usage->GetLinkedDeclaration();
+                    }
+                }
+                if (!Declaration)
+                {
+                    return;
+                }
+                
+                UEdGraphNode* DeclarationGraphNode = Declaration->GetGraphNode();
+                const FVector2D KnotPosition(DeclarationGraphNode->NodePosX + 50, DeclarationGraphNode->NodePosY);
 
-				const UFlowNode_Reroute* Reroute = CastChecked<UFlowNode_Reroute>(
-					FFlowGraphSchemaAction_NewNode::CreateNode(
-						GetCurrentGraph(), nullptr, UFlowNode_Reroute::StaticClass(), KnotPosition)->GetFlowNodeBase());
+                const UFlowNode_Reroute* Reroute = CastChecked<UFlowNode_Reroute>(
+                    FFlowGraphSchemaAction_NewNode::CreateNode(
+                        GetCurrentGraph(), nullptr, UFlowNode_Reroute::StaticClass(), KnotPosition)->GetFlowNodeBase());
 
-				const auto KnotGraphNode = CastChecked<UFlowGraphNode_Reroute>(Reroute->GetGraphNode());
-				for (UEdGraphPin* Pin : DeclarationGraphNode->GetAllPins())
-				{
-					if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
-					{
-						for (UEdGraphPin* InputPin : Pin->LinkedTo)
-						{
-							KnotGraphNode->InputPins[0]->MakeLinkTo(InputPin);
-						}
-					}
-					if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
-					{
-						for (UEdGraphPin* OutputPin : Pin->LinkedTo)
-						{
-							KnotGraphNode->OutputPins[0]->MakeLinkTo(OutputPin);
-						}
-					}
-				}
-				DeclarationGraphNode->DestroyNode();
+                const auto KnotGraphNode = CastChecked<UFlowGraphNode_Reroute>(Reroute->GetGraphNode());
+                for (UEdGraphPin* Pin : DeclarationGraphNode->GetAllPins())
+                {
+                    if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+                    {
+                        for (UEdGraphPin* InputPin : Pin->LinkedTo)
+                        {
+                            KnotGraphNode->InputPins[0]->MakeLinkTo(InputPin);
+                        }
+                    }
+                    if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
+                    {
+                        for (UEdGraphPin* OutputPin : Pin->LinkedTo)
+                        {
+                            KnotGraphNode->OutputPins[0]->MakeLinkTo(OutputPin);
+                        }
+                    }
+                }
+                DeclarationGraphNode->DestroyNode();
 
-				for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
-				{
-					if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value); Usage && Usage->GetLinkedDeclaration() == Declaration)
-					{
-						if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
-						{
-							for (UEdGraphPin* Pin = Usage->GetGraphNode()->GetAllPins()[0]; UEdGraphPin* OutputPin : Pin->LinkedTo)
-							{
-								KnotGraphNode->OutputPins[0]->MakeLinkTo(OutputPin);
-							}
-							UsageGraphNode->DestroyNode();
-						}
-					}
-				}
-			}
-		}
-	}
+                for (const TPair<FGuid, UFlowNode*>& Node : FlowAsset->GetNodes())
+                {
+                    if (const auto* Usage = Cast<UFlowNode_NamedRerouteUsage>(Node.Value); Usage && Usage->GetLinkedDeclaration() == Declaration)
+                    {
+                        if (UEdGraphNode* UsageGraphNode = Usage->GetGraphNode())
+                        {
+                            for (UEdGraphPin* Pin : UsageGraphNode->GetAllPins())
+                            {
+                                if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+                                {
+                                    for (UEdGraphPin* InputPin : Pin->LinkedTo)
+                                    {
+                                        KnotGraphNode->InputPins[0]->MakeLinkTo(InputPin);
+                                    }
+                                }
+                            }
+                            UsageGraphNode->DestroyNode();
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 #undef LOCTEXT_NAMESPACE
