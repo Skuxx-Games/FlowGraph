@@ -19,7 +19,8 @@ void UFlowNode_NamedRerouteUsage::ExecuteInput(const FName& PinName)
 {
 	if (LinkedDeclaration)
 	{
-		LinkedDeclaration->ExecuteInput(PinName);
+		Finish();
+		GetFlowAsset()->TriggerInput(LinkedDeclaration->GetGuid(), PinName);
 	}
 }
 

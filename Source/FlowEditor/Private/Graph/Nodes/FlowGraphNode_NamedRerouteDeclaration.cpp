@@ -2,7 +2,7 @@
 
 #include "Graph/Nodes/FlowGraphNode_NamedRerouteDeclaration.h"
 #include "FlowAsset.h"
-#include "Graph/FlowGraph.h"
+#include "Graph/FlowGraphSchema.h"
 #include "Graph/Widgets/SFlowGraphNode.h"
 #include "Nodes/Route/FlowNode_NamedRerouteDeclaration.h"
 
@@ -38,7 +38,21 @@ void UFlowGraphNode_NamedRerouteDeclaration::PostEditChangeProperty(FPropertyCha
 void UFlowGraphNode_NamedRerouteDeclaration::PostPlacedNewNode()
 {
 	EnsureUniqueNodeTitle();
+	UFlowGraphSchema::OnNodeListChanged.Broadcast();
 	Super::PostPlacedNewNode();
+}
+
+void UFlowGraphNode_NamedRerouteDeclaration::AllocateDefaultPins()
+{
+	check(Pins.Num() == 0);
+
+	if (UFlowNode* FlowNode = Cast<UFlowNode>(GetFlowNodeBase()))
+	{
+		for (const FFlowPin& OutputPin : FlowNode->OutputPins)
+		{
+			CreateOutputPin(OutputPin);
+		}
+	}
 }
 
 void UFlowGraphNode_NamedRerouteDeclaration::EnsureUniqueNodeTitle() const

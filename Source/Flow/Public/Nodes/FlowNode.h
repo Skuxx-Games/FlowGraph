@@ -28,6 +28,7 @@ class FLOW_API UFlowNode
 	friend class UFlowNodeAddOn;
 	friend class SFlowInputPinHandle;
 	friend class SFlowOutputPinHandle;
+	friend class UFlowGraphNode_NamedRerouteDeclaration;
 
 //////////////////////////////////////////////////////////////////////////
 // Node

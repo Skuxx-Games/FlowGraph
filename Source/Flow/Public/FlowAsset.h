@@ -52,6 +52,7 @@ public:
 	friend class UFlowNode;
 	friend class UFlowNode_CustomOutput;
 	friend class UFlowNode_SubGraph;
+	friend class UFlowNode_NamedRerouteUsage;
 	friend class UFlowSubsystem;
 
 	friend class FFlowAssetDetails;

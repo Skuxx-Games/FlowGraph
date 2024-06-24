@@ -18,6 +18,7 @@ class FLOWEDITOR_API UFlowGraphNode_NamedRerouteDeclaration : public UFlowGraphN
 	virtual void PostEditImport() override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostPlacedNewNode() override;
+	virtual void AllocateDefaultPins() override;
 	virtual void EnsureUniqueNodeTitle() const;
 	// --
 };
