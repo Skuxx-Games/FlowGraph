@@ -39,6 +39,6 @@ private:
 	void TryUpdateNode();
 #endif
 	// The declaration this usage is linked to
-	UPROPERTY()
+	UPROPERTY(TextExportTransient)
 	TObjectPtr<UFlowNode_NamedRerouteDeclaration> LinkedDeclaration;
 };

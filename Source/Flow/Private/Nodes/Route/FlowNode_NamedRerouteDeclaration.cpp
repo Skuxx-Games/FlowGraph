@@ -12,9 +12,9 @@ UFlowNode_NamedRerouteDeclaration::UFlowNode_NamedRerouteDeclaration(const FObje
 	Category = TEXT("Route");
 	NodeStyle = EFlowNodeStyle::Custom;
 	CustomNodeColor = FLinearColor::MakeRandomColor();
+	NodeTitle = TEXT("Named Reroute");
 #endif
 	InputPins = {};
-	NodeTitle = TEXT("Named Reroute");
 	AllowedSignalModes = {EFlowSignalMode::Enabled, EFlowSignalMode::Disabled, EFlowSignalMode::PassThrough};
 }
 

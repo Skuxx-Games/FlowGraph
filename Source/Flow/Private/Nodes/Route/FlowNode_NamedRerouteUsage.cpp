@@ -25,7 +25,7 @@ void UFlowNode_NamedRerouteUsage::ExecuteInput(const FName& PinName)
 
 void UFlowNode_NamedRerouteUsage::RegisterLinkedDeclaration(UFlowNode_NamedRerouteDeclaration* Declaration)
 {
-	Modify(true);
+	Modify();
 	if (Declaration)
 	{
 		LinkedDeclaration = Declaration;
@@ -38,7 +38,7 @@ void UFlowNode_NamedRerouteUsage::RegisterLinkedDeclaration(UFlowNode_NamedRerou
 
 void UFlowNode_NamedRerouteUsage::UnregisterLinkedDeclaration()
 {
-	Modify(true);
+	Modify();
 	if (LinkedDeclaration)
 	{
 		LinkedDeclaration = nullptr;

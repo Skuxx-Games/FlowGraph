@@ -37,11 +37,7 @@ void UFlowGraphNode_NamedRerouteDeclaration::PostEditChangeProperty(FPropertyCha
 
 void UFlowGraphNode_NamedRerouteDeclaration::PostPlacedNewNode()
 {
-	if (UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetFlowNodeBase()))
-	{
-		EnsureUniqueNodeTitle();
-		Declaration->CustomNodeColor = FLinearColor::MakeRandomColor();
-	}
+	EnsureUniqueNodeTitle();
 	Super::PostPlacedNewNode();
 }
 

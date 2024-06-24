@@ -1369,6 +1369,8 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
     if (SelectedNodes.Num() == 1)
     {
         ClearSelectionSet();
+        TArray<UEdGraphNode*> NewNodes; // To store new nodes for selection
+    	
         for (FGraphPanelSelectionSet::TConstIterator NodeIt(SelectedNodes); NodeIt; ++NodeIt)
         {
             if (UFlowGraphNode_Reroute* GraphNode = Cast<UFlowGraphNode_Reroute>(*NodeIt))
@@ -1376,17 +1378,19 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
                 UEdGraph* Graph = GraphNode->GetGraph();
                 const FScopedTransaction Transaction(LOCTEXT("ConvertRerouteToNamedReroute", "Convert reroute to named reroute"));
                 Graph->Modify();
-            	
+
                 UFlowNode_NamedRerouteDeclaration* Declaration = CastChecked<UFlowNode_NamedRerouteDeclaration>(
                     FFlowGraphSchemaAction_NewNode::CreateNode(
                         GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteDeclaration::StaticClass(),
                         FVector2D(GraphNode->NodePosX + 100, GraphNode->NodePosY))->GetFlowNodeBase());
-                
+
                 if (!Declaration)
                 {
                     return;
                 }
-            	
+
+                NewNodes.Add(Declaration->GetGraphNode());
+
                 UEdGraphPin* DeclarationOutputPin = nullptr;
                 for (auto* Pin : Declaration->GetGraphNode()->GetAllPins())
                 {
@@ -1400,13 +1404,13 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
                 {
                     return;
                 }
-            	
+
                 UEdGraphPin* RerouteOutputPin = GraphNode->OutputPins[0];
                 for (auto* OutputPin : RerouteOutputPin->LinkedTo)
                 {
                     DeclarationOutputPin->MakeLinkTo(OutputPin);
                 }
-            	
+
                 constexpr int32 OffsetX = -100;
                 int32 OffsetY = -50;
                 for (auto* InputPin : GraphNode->InputPins[0]->LinkedTo)
@@ -1415,12 +1419,12 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
                         FFlowGraphSchemaAction_NewNode::CreateNode(
                             GetCurrentGraph(), nullptr, UFlowNode_NamedRerouteUsage::StaticClass(),
                             FVector2D(GraphNode->NodePosX + OffsetX, GraphNode->NodePosY + OffsetY))->GetFlowNodeBase());
-                    
+
                     if (!Usage)
                     {
                         continue;
                     }
-                	
+
                     UEdGraphPin* UsageInputPin = nullptr;
                     for (auto* Pin : Usage->GetGraphNode()->GetAllPins())
                     {
@@ -1434,15 +1438,20 @@ void SFlowGraphEditor::OnConvertRerouteToNamedReroute()
                     {
                         continue;
                     }
-                	
+
                     InputPin->MakeLinkTo(UsageInputPin);
                     Usage->RegisterLinkedDeclaration(Declaration);
+                    NewNodes.Add(Usage->GetGraphNode());
                     OffsetY += 100; 
                 }
-            	
+
                 GraphNode->DestroyNode();
-                SetNodeSelection(Declaration->GetGraphNode(), true);
             }
+        }
+    	
+        for (auto* NewNode : NewNodes)
+        {
+            SetNodeSelection(NewNode, true);
         }
     }
 }
