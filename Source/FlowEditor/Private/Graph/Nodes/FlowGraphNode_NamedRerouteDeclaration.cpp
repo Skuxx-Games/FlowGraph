@@ -17,26 +17,37 @@ UFlowGraphNode_NamedRerouteDeclaration::UFlowGraphNode_NamedRerouteDeclaration(c
 void UFlowGraphNode_NamedRerouteDeclaration::PostEditImport()
 {
 	Super::PostEditImport();
-
+	Modify();
 	if (UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetFlowNodeBase()))
 	{
 		EnsureUniqueNodeTitle();
 		Declaration->CustomNodeColor = FLinearColor::MakeRandomColor();
 	}
+	UFlowGraphSchema::OnNodeListChanged.Broadcast();
 }
 
 void UFlowGraphNode_NamedRerouteDeclaration::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
+	Modify();
 	const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetFlowNodeBase());
 	if (Declaration && PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(UFlowNode_NamedRerouteDeclaration, NodeTitle))
 	{
 		EnsureUniqueNodeTitle();
 	}
+	UFlowGraphSchema::OnNodeListChanged.Broadcast();
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
+void UFlowGraphNode_NamedRerouteDeclaration::PostEditUndo()
+{
+	Modify();
+	UFlowGraphSchema::OnNodeListChanged.Broadcast();
+	Super::PostEditUndo();
 }
 
 void UFlowGraphNode_NamedRerouteDeclaration::PostPlacedNewNode()
 {
+	Modify();
 	EnsureUniqueNodeTitle();
 	UFlowGraphSchema::OnNodeListChanged.Broadcast();
 	Super::PostPlacedNewNode();

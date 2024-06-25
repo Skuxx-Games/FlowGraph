@@ -320,6 +320,11 @@ void UFlowAsset::RegisterNode(const FGuid& NewGuid, UFlowNode* NewNode)
 
 	HarvestNodeConnections();
 	UpdateNamedRerouteUsages(NewNode);
+
+	if (const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(NewNode))
+	{
+		Declaration->GetGraphNode()->PostPlacedNewNode();
+	}
 }
 
 void UFlowAsset::UnregisterNode(const FGuid& NodeGuid)
@@ -327,6 +332,7 @@ void UFlowAsset::UnregisterNode(const FGuid& NodeGuid)
 	if (const UFlowNode_NamedRerouteDeclaration* Declaration = Cast<UFlowNode_NamedRerouteDeclaration>(GetNode(NodeGuid)))
 	{
 		UpdateUsagesForDeletedDeclaration(Declaration->GetGuid());
+		Declaration->GetGraphNode()->PostPlacedNewNode();
 	}
 	
 	Nodes.Remove(NodeGuid);

@@ -103,6 +103,7 @@ bool UFlowNode_NamedRerouteUsage::GetDynamicTitleColor(FLinearColor& OutColor) c
 
 void UFlowNode_NamedRerouteUsage::TryUpdateNode()
 {
+	Modify();
 	if (LinkedDeclaration)
 	{
 		NodeTitle = FName(*LinkedDeclaration->GetNodeTitle().ToString());
