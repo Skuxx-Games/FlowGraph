@@ -90,7 +90,7 @@ protected:
 	virtual void DuplicateNodes();
 	virtual bool CanDuplicateNodes() const;
 
-	virtual void OnNodeDoubleClicked(class UEdGraphNode* Node) const;
+	virtual void OnNodeDoubleClicked(class UEdGraphNode* Node);
 	virtual void OnNodeTitleCommitted(const FText& NewText, ETextCommit::Type CommitInfo, UEdGraphNode* NodeBeingChanged);
 
 	virtual void RefreshContextPins() const;
@@ -146,4 +146,8 @@ private:
 
 	void JumpToNodeDefinition() const;
 	bool CanJumpToNodeDefinition() const;
+	void OnSelectNamedRerouteDeclaration();
+	void OnSelectNamedRerouteUsages();
+	void OnConvertRerouteToNamedReroute();
+	void OnConvertNamedRerouteToReroute() const;
 };
