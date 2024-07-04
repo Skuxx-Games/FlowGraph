@@ -314,6 +314,7 @@ void FFlowAssetEditor::InitFlowAssetEditor(const EToolkitMode::Type Mode, const 
 	GEditor->RegisterForUndo(this);
 
 	UFlowGraphSchema::SubscribeToAssetChanges();
+	FlowAsset->OnDetailsRefreshRequested.BindThreadSafeSP(this, &FFlowAssetEditor::RefreshDetails);
 
 	BindToolbarCommands();
 	CreateToolbar();
@@ -433,6 +434,14 @@ void FFlowAssetEditor::RefreshAsset()
 {
 	// attempt to refresh graph, fix common issues automatically
 	CastChecked<UFlowGraph>(FlowAsset->GetGraph())->RefreshGraph();
+}
+
+void FFlowAssetEditor::RefreshDetails()
+{
+	if (DetailsView.IsValid())
+	{
+		DetailsView->ForceRefresh();
+	}
 }
 
 void FFlowAssetEditor::ValidateAsset_Internal()
